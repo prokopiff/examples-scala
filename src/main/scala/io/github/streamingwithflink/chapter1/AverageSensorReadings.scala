@@ -15,11 +15,10 @@
  */
 package io.github.streamingwithflink.chapter1
 
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
-
-import org.apache.flink.streaming.api.TimeCharacteristic
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource}
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.scala.function.WindowFunction
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
@@ -33,8 +32,6 @@ object AverageSensorReadings {
     // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -43,16 +40,15 @@ object AverageSensorReadings {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     val avgTemp: DataStream[SensorReading] = sensorData
       // convert Fahrenheit to Celsius using an inlined map function
-      .map( r =>
-      SensorReading(r.id, r.timestamp, (r.temperature - 32) * (5.0 / 9.0)) )
+      .map( r => SensorReading(r.id, r.timestamp, (r.temperature - 32) * (5.0 / 9.0)) )
       // organize stream by sensorId
       .keyBy(_.id)
       // group readings in 1 second windows
-      .timeWindow(Time.seconds(1))
+      .window(TumblingEventTimeWindows.of(Time.seconds(1)))
       // compute average temperature using a user-defined function
       .apply(new TemperatureAverager)
 

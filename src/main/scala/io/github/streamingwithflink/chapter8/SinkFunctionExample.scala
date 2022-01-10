@@ -2,10 +2,8 @@ package io.github.streamingwithflink.chapter8
 
 import java.io.PrintStream
 import java.net.{InetAddress, Socket}
-
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import org.apache.flink.streaming.api.scala._
 
@@ -22,8 +20,6 @@ object SinkFunctionExample {
   def main(args: Array[String]): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -32,7 +28,7 @@ object SinkFunctionExample {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     // write the sensor readings to a socket
     readings.addSink(new SimpleSocketSink("localhost", 9191))
@@ -60,7 +56,7 @@ class SimpleSocketSink(val host: String, val port: Int)
 
   override def invoke(
       value: SensorReading,
-      ctx: SinkFunction.Context[_]): Unit = {
+      ctx: SinkFunction.Context): Unit = {
     // write sensor reading to socket
     writer.println(value.toString)
     writer.flush()

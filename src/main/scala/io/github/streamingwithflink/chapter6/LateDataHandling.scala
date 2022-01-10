@@ -1,11 +1,10 @@
 package io.github.streamingwithflink.chapter6
 
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.Types
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{DataStream, OutputTag, StreamExecutionEnvironment}
@@ -29,8 +28,6 @@ object LateDataHandling {
     // checkpoint every 10 seconds
     env.getCheckpointConfig.setCheckpointInterval(10 * 1000)
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(500L)
 
@@ -41,7 +38,7 @@ object LateDataHandling {
       // shuffle timestamps by max 7 seconds to generate late data
       .map(new TimestampShuffler(7 * 1000))
       // assign timestamps and watermarks with an offset of 5 seconds
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     // Different strategies to handle late records.
     // Select and uncomment on of the lines below to demonstrate a strategy.

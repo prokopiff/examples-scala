@@ -1,6 +1,6 @@
 package io.github.streamingwithflink.chapter6
 
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.api.common.functions.{AggregateFunction, ReduceFunction}
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -32,7 +32,7 @@ object WindowFunctions {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     val minTempPerWindow: DataStream[(String, Double)] = sensorData
       .map(r => (r.id, r.temperature))

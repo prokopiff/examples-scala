@@ -16,10 +16,12 @@
 package io.github.streamingwithflink.chapter5
 
 import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
+import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.functions.{FilterFunction, FlatMapFunction, MapFunction}
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
+
+import java.time.Duration
 
 /** Object that defines the DataStream program in the main() method */
 object BasicTransformations {
@@ -30,8 +32,6 @@ object BasicTransformations {
     // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -40,7 +40,9 @@ object BasicTransformations {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(WatermarkStrategy.forBoundedOutOfOrderness(Duration.ofSeconds(15))
+        .withTimestampAssigner(new SensorTimeAssigner)
+      )
 
     // filter out sensor measurements from sensors with temperature under 25 degrees
     val filteredSensors: DataStream[SensorReading] = readings

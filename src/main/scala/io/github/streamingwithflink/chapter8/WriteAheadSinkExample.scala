@@ -23,9 +23,8 @@ import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
-
 import io.github.streamingwithflink.chapter8.util.FailingMapper
-import io.github.streamingwithflink.util.{ResettableSensorSource, SensorReading, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{ResettableSensorSource, SampleWatermarkStrategy, SensorReading, SensorTimeAssigner}
 import org.apache.commons.lang3.StringUtils
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -76,7 +75,7 @@ object WriteAheadSinkExample {
       // SensorSource generates random temperature readings
       .addSource(new ResettableSensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     // compute average temperature of all sensors every second
     val avgTemp: DataStream[(String, Double)] = sensorData

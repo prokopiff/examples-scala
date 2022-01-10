@@ -3,12 +3,10 @@ package io.github.streamingwithflink.chapter8
 import java.sql.{Connection, DriverManager, PreparedStatement}
 import java.util.Properties
 import java.util.concurrent.{Executors, TimeUnit}
-
 import io.github.streamingwithflink.chapter8.util.{DerbySetup, DerbyWriter}
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.api.common.functions.RichMapFunction
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.scala.async.{AsyncFunction, ResultFuture}
 
@@ -59,8 +57,6 @@ object AsyncFunctionExample {
     // checkpoint every 10 seconds
     env.getCheckpointConfig.setCheckpointInterval(10 * 1000)
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -69,7 +65,7 @@ object AsyncFunctionExample {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource).setParallelism(8)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     // OPTION 1 (comment out to disable)
     // --------
@@ -108,7 +104,7 @@ class DerbyAsyncFunction extends AsyncFunction[SensorReading, (String, String)] 
   // direct execution context to forward result future to callback object
   private lazy val directExecCtx =
     ExecutionContext.fromExecutor(
-      org.apache.flink.runtime.concurrent.Executors.directExecutor())
+      org.apache.flink.util.concurrent.Executors.directExecutor())
 
   /** Executes JDBC query in a thread and handles the resulting Future
     * with an asynchronous callback. */

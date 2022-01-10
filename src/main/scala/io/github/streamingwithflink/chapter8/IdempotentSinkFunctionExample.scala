@@ -2,11 +2,9 @@ package io.github.streamingwithflink.chapter8
 
 import java.sql.{Connection, DriverManager, PreparedStatement}
 import java.util.Properties
-
 import io.github.streamingwithflink.chapter8.util.{DerbyReader, DerbySetup}
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.functions.sink.SinkFunction.Context
 import org.apache.flink.streaming.api.scala._
@@ -40,8 +38,6 @@ object IdempotentSinkFunctionExample {
     // checkpoint every 10 seconds
     env.getCheckpointConfig.setCheckpointInterval(10 * 1000)
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -50,7 +46,7 @@ object IdempotentSinkFunctionExample {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     val celsiusReadings: DataStream[SensorReading] = sensorData
       // convert Fahrenheit to Celsius using an inlined map function
@@ -86,7 +82,7 @@ class DerbyUpsertSink extends RichSinkFunction[SensorReading] {
       "UPDATE Temperatures SET temp = ? WHERE sensor = ?")
   }
 
-  override def invoke(r: SensorReading, context: Context[_]): Unit = {
+  override def invoke(r: SensorReading, context: Context): Unit = {
     // set parameters for update statement and execute it
     updateStmt.setDouble(1, r.temperature)
     updateStmt.setString(2, r.id)

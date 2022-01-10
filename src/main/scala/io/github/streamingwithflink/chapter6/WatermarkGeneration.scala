@@ -14,8 +14,6 @@ object WatermarkGeneration {
     // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure interval of periodic watermark generation
     env.getConfig.setAutoWatermarkInterval(1000L)
 

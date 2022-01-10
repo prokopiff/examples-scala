@@ -22,11 +22,9 @@ import java.io.BufferedWriter
 import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneId, ZoneOffset}
-
 import io.github.streamingwithflink.chapter8.util.FailingMapper
-import io.github.streamingwithflink.util.{ResettableSensorSource, SensorReading, SensorTimeAssigner}
+import io.github.streamingwithflink.util.{ResettableSensorSource, SampleWatermarkStrategy, SensorReading, SensorTimeAssigner}
 import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.sink.TwoPhaseCommitSinkFunction
 import org.apache.flink.streaming.api.functions.sink.SinkFunction.Context
 import org.apache.flink.streaming.api.scala._
@@ -62,8 +60,6 @@ object TransactionSinkExample {
     // checkpoint every 10 seconds
     env.getCheckpointConfig.setCheckpointInterval(10 * 1000)
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -72,7 +68,7 @@ object TransactionSinkExample {
       // SensorSource generates random temperature readings
       .addSource(new ResettableSensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     // compute average temperature of all sensors every second
     val avgTemp: DataStream[(String, Double)] = sensorData
@@ -164,7 +160,7 @@ class TransactionalFileSink(val targetPath: String, val tempPath: String)
   }
 
   /** Write record into the current transaction file. */
-  override def invoke(transaction: String, value: (String, Double), context: Context[_]): Unit = {
+  override def invoke(transaction: String, value: (String, Double), context: Context): Unit = {
     transactionWriter.write(value.toString)
     transactionWriter.write('\n')
   }

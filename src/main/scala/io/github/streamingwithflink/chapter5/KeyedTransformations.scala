@@ -15,8 +15,7 @@
  */
 package io.github.streamingwithflink.chapter5
 
-import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
-import org.apache.flink.streaming.api.TimeCharacteristic
+import io.github.streamingwithflink.util.{SampleWatermarkStrategy, SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.streaming.api.scala._
 
 /** Object that defines the DataStream program in the main() method */
@@ -28,8 +27,6 @@ object KeyedTransformations {
     // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
-    // use event time for the application
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // configure watermark interval
     env.getConfig.setAutoWatermarkInterval(1000L)
 
@@ -38,7 +35,7 @@ object KeyedTransformations {
       // SensorSource generates random temperature readings
       .addSource(new SensorSource)
       // assign timestamps and watermarks which are required for event time
-      .assignTimestampsAndWatermarks(new SensorTimeAssigner)
+      .assignTimestampsAndWatermarks(SampleWatermarkStrategy.strategy)
 
     // group sensor readings by their id
     val keyed: KeyedStream[SensorReading, String] = readings

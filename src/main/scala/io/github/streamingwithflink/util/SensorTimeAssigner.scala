@@ -15,17 +15,23 @@
  */
 package io.github.streamingwithflink.util
 
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.streaming.api.windowing.time.Time
+
+import java.time.Duration
 
 /**
   * Assigns timestamps to SensorReadings based on their internal timestamp and
   * emits watermarks with five seconds slack.
   */
 class SensorTimeAssigner
-    extends BoundedOutOfOrdernessTimestampExtractor[SensorReading](Time.seconds(5)) {
+    extends SerializableTimestampAssigner[SensorReading] {
 
   /** Extracts timestamp from SensorReading. */
-  override def extractTimestamp(r: SensorReading): Long = r.timestamp
+   override def extractTimestamp(r: SensorReading, t: Long): Long = r.timestamp
+}
 
+object SampleWatermarkStrategy {
+  val strategy: WatermarkStrategy[SensorReading] = WatermarkStrategy.forBoundedOutOfOrderness[SensorReading](Duration.ofSeconds(15))
+    .withTimestampAssigner(new SensorTimeAssigner)
 }
